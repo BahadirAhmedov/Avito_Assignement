@@ -32,9 +32,7 @@ func main() {
 
 	log := setupLogger(cfg.Env)
 
-	// Prod
-	// handlers := app.New(log, "postgres", 5432, "postgres", "postgres", "avito")
-	// Local
+
 	handlers := app.New(log, cfg.Db.Host, cfg.Db.Port, cfg.Db.User, cfg.Db.Password, cfg.Db.Name)
 
 
