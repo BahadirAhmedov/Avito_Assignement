@@ -1,0 +1,80 @@
+package postgres
+
+import (
+	"database/sql"
+	"fmt"
+	"errors"
+
+	"Backend-trainee-assignment-autumn-2025/internal/domain/models"
+	"Backend-trainee-assignment-autumn-2025/internal/storage"
+	req "Backend-trainee-assignment-autumn-2025/internal/transport/http/requests"
+)
+
+
+func (s *Storage) SetIsActive(request req.UsersRequest) (models.User, error) {
+	const op = "storage.postgres.SetIsActive"
+
+	var user models.User
+
+	err := s.db.QueryRow(
+		`UPDATE users SET is_active = $1, updated_at = NOW()
+             WHERE user_id = $2
+             RETURNING user_id, username, team_name, is_active`,
+		request.IsActive, request.UserId,
+	).Scan(&user.UserId, &user.UserName, &user.TeamName, &user.IsActive)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return user, nil
+}
+
+
+func (s *Storage) ReadReviewUsers(request string)([]models.PullRequestShort, error)  {
+	const op = "storage.postgres.ReadReviewUsers"
+
+	
+	var exists bool
+    err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE user_id=$1)", request).Scan(&exists)
+    if err != nil { 
+		return nil, fmt.Errorf("%s: %w", op, err) 
+	}
+    if !exists {
+        return nil, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+    }
+
+	rows, err := s.db.Query(`
+        SELECT p.pull_request_id, p.pull_request_name, p.author_id, p.status
+        FROM pull_requests p
+        JOIN pr_reviewers r ON r.pull_request_id = p.pull_request_id
+        WHERE r.user_id = $1
+        ORDER BY p.created_at DESC
+    `, request)
+
+    if err != nil { 
+		fmt.Println(err)
+		return nil, fmt.Errorf("%s: %w", op, err) 
+	}
+    defer rows.Close()
+
+    var pullRequests []models.PullRequestShort
+    for rows.Next() {
+        var pullRequest models.PullRequestShort
+       
+		if err = rows.Scan(&pullRequest.PullRequestId, &pullRequest.PullRequestName, &pullRequest.AuthorId, &pullRequest.Status); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		pullRequests = append(pullRequests, pullRequest)
+    }
+
+
+	if pullRequests == nil {
+		pullRequests = []models.PullRequestShort{}
+	}
+
+	return pullRequests, nil
+}
