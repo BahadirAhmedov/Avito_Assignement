@@ -40,6 +40,8 @@ func main() {
 	router.GET("team/get", handlers.TeamGet)
 	router.POST("/users/setIsActive", handlers.UsersSetIsActive)
 	router.GET("/users/getReview", handlers.UsersGetReview)
+	router.POST("/users/delete", handlers.UsersDelete)
+	router.POST("/users/restore", handlers.UsersRestore)
 	router.POST("/pullRequest/create", handlers.PullRequestCreate)
 	router.POST("/pullRequest/merge", handlers.PullRequestMerge)
 	router.POST("/pullRequest/reassign", handlers.PullRequestReassign)
