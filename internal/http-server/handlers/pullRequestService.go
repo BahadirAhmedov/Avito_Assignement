@@ -17,7 +17,9 @@ const (
 	PR_MERGED       = "PR_MERGED"
 	NOT_ASSIGNED    = "NOT_ASSIGNED"
 	INTERNAL_ERROR  = "INTERNAL_ERROR"
-	NO_CANDIDATE    = "NO_CANDIDATE"
+	NO_CANDIDATE     = "NO_CANDIDATE"
+	ALREADY_DELETED  = "ALREADY_DELETED"
+	NOT_DELETED      = "NOT_DELETED"
 )
 
 const (
@@ -41,6 +43,8 @@ type TeamProvider interface {
 type UserProvider interface {
 	SetIsActive(requests.UsersRequest) (models.User, error)
 	ReadReviewUsers(request string) ([]models.PullRequestShort, error)
+	DeleteUser(requests.UserDeleteRequest) (models.User, error)
+	RestoreUser(requests.UserRestoreRequest) (models.User, error)
 }
 
 type PullRequestProvider interface {
