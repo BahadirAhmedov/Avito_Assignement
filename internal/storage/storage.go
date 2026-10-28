@@ -16,4 +16,6 @@ var (
 	ErrReviewerIsNotAssignedToThisPr = errors.New("reviewer is not assigned to this pr")
 	ErrActiveReplacementCandidateInTeam = errors.New("no active replacement candidate in team")
 	ErrUserExists = errors.New("user already exists")
+	ErrUserAlreadyDeleted = errors.New("user already deleted")
+	ErrUserNotDeleted = errors.New("user is not deleted")
 )

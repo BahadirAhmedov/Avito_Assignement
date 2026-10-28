@@ -104,3 +104,103 @@ func (p *PullRequest) UsersGetReview(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, responseBody)
 
 }
+
+
+func (p *PullRequest) UsersDelete(ctx *gin.Context) {
+	const op = "handlers.UsersDelete"
+
+	log := p.log.With(
+		slog.String("op", op),
+	)
+
+	auth := ctx.GetHeader("Authorization")
+
+	if auth == "" || auth != "Bearer "+adminSecret {
+		log.Info("invalid token", slog.Any("token", auth))
+
+		ctx.JSON(http.StatusUnauthorized, responses.Error(UNAUTHORIZED, "invalid token"))
+		return
+	}
+
+	var request requests.UserDeleteRequest
+
+	err := ctx.BindJSON(&request)
+	if err != nil {
+		log.Error("failed to decode request body", sl.Err(err))
+		ctx.JSON(http.StatusBadRequest, responses.Error(INVALID_REQUEST, "failed to decode request body"))
+		return
+	}
+
+	user, err := p.userProvider.DeleteUser(request)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Info("user not found", slog.String("user_id", request.UserId))
+			ctx.JSON(http.StatusNotFound, responses.Error(NOT_FOUND, "user not found"))
+			return
+		}
+
+		if errors.Is(err, storage.ErrUserAlreadyDeleted) {
+			log.Info("user already deleted", slog.String("user_id", request.UserId))
+			ctx.JSON(http.StatusConflict, responses.Error(USER_DELETED, "user already deleted"))
+			return
+		}
+
+		log.Error("failed to delete user", sl.Err(err))
+		ctx.JSON(http.StatusInternalServerError, responses.Error(INTERNAL_ERROR, "failed to delete user"))
+		return
+	}
+
+	log.Info("user deleted", slog.String("user_id", user.UserId))
+
+	ctx.JSON(http.StatusOK, responses.UserDeleteResponse{User: user})
+}
+
+
+func (p *PullRequest) UsersRestore(ctx *gin.Context) {
+	const op = "handlers.UsersRestore"
+
+	log := p.log.With(
+		slog.String("op", op),
+	)
+
+	auth := ctx.GetHeader("Authorization")
+
+	if auth == "" || auth != "Bearer "+adminSecret {
+		log.Info("invalid token", slog.Any("token", auth))
+
+		ctx.JSON(http.StatusUnauthorized, responses.Error(UNAUTHORIZED, "invalid token"))
+		return
+	}
+
+	var request requests.UserRestoreRequest
+
+	err := ctx.BindJSON(&request)
+	if err != nil {
+		log.Error("failed to decode request body", sl.Err(err))
+		ctx.JSON(http.StatusBadRequest, responses.Error(INVALID_REQUEST, "failed to decode request body"))
+		return
+	}
+
+	user, err := p.userProvider.RestoreUser(request)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Info("user not found", slog.String("user_id", request.UserId))
+			ctx.JSON(http.StatusNotFound, responses.Error(NOT_FOUND, "user not found"))
+			return
+		}
+
+		if errors.Is(err, storage.ErrUserNotDeleted) {
+			log.Info("user is not deleted", slog.String("user_id", request.UserId))
+			ctx.JSON(http.StatusConflict, responses.Error(USER_NOT_DELETED, "user is not deleted"))
+			return
+		}
+
+		log.Error("failed to restore user", sl.Err(err))
+		ctx.JSON(http.StatusInternalServerError, responses.Error(INTERNAL_ERROR, "failed to restore user"))
+		return
+	}
+
+	log.Info("user restored", slog.String("user_id", user.UserId))
+
+	ctx.JSON(http.StatusOK, responses.UserRestoreResponse{User: user})
+}

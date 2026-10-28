@@ -11,3 +11,11 @@ type UsersReadReviewResponse struct{
 	UserId string`json:"user_id"`
 	PullRequests []models.PullRequestShort `json:"pull_requests"`
 }
+
+type UserDeleteResponse struct {
+	User models.User `json:"user"`
+}
+
+type UserRestoreResponse struct {
+	User models.User `json:"user"`
+}
