@@ -40,7 +40,7 @@ func (s *Storage) SavePullRequest(request req.PullRequestCreateRequest) ([]strin
 	}
 
 	var teamName string
-	err = tx.QueryRow("SELECT team_name FROM users WHERE user_id=$1", request.AuthorId).Scan(&teamName)
+	err = tx.QueryRow("SELECT team_name FROM users WHERE user_id=$1 AND deleted_at IS NULL", request.AuthorId).Scan(&teamName)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", fmt.Errorf("%s: %w", op, storage.ErrAuthorNotFound)
@@ -48,7 +48,7 @@ func (s *Storage) SavePullRequest(request req.PullRequestCreateRequest) ([]strin
 		return nil, "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	rows, _ := tx.Query("SELECT user_id FROM users WHERE team_name=$1 AND user_id<>$2 AND is_active=true ORDER BY RANDOM() LIMIT 2", teamName, request.AuthorId)
+	rows, _ := tx.Query("SELECT user_id FROM users WHERE team_name=$1 AND user_id<>$2 AND is_active=true AND deleted_at IS NULL ORDER BY RANDOM() LIMIT 2", teamName, request.AuthorId)
 	var reviewers []string
 	for rows.Next() {
 		var uid string
@@ -197,7 +197,7 @@ func (s *Storage) ReassignPullRequest(request req.PullRequestReassignRequest) (m
 		return models.PullRequest{}, "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	rows, err := tx.Query("SELECT user_id FROM users WHERE team_name=$1 AND user_id <> $2  AND user_id <> $3 AND is_active=true ", teamName, authorId, request.OldUserId)
+	rows, err := tx.Query("SELECT user_id FROM users WHERE team_name=$1 AND user_id <> $2  AND user_id <> $3 AND is_active=true AND deleted_at IS NULL ", teamName, authorId, request.OldUserId)
 	if err != nil {
 		return models.PullRequest{}, "", fmt.Errorf("%s: %w", op, err)	
 	}

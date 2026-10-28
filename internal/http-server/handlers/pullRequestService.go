@@ -41,6 +41,8 @@ type TeamProvider interface {
 type UserProvider interface {
 	SetIsActive(requests.UsersRequest) (models.User, error)
 	ReadReviewUsers(request string) ([]models.PullRequestShort, error)
+	DeleteUser(requests.UserDeleteRequest) (models.User, error)
+	RestoreUser(requests.UserRestoreRequest) (models.User, error)
 }
 
 type PullRequestProvider interface {
