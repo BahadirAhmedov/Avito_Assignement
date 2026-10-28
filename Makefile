@@ -3,7 +3,7 @@ APP2 := pullRequestService
 
 BIN_DIR := bin
 
-.PHONY: build build-migrator build-service run-migrator run-service clean test lint tidy
+.PHONY: build build-migrator build-service run-migrator run-service clean test lint tidy check
 
 build: build-migrator build-service
 
@@ -21,6 +21,10 @@ run-service:
 
 lint:
 	golangci-lint run
+
+# Проверка конвенций из AGENTS.md и .claude/skills/add-endpoint/SKILL.md
+check:
+	./scripts/check-conventions.sh
 
 clean:
 	rm -rf $(BIN_DIR)
