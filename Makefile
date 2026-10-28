@@ -22,10 +22,6 @@ run-service:
 lint:
 	golangci-lint run
 
-# Проверка конвенций из AGENTS.md и .claude/skills/add-endpoint/SKILL.md
-check:
-	./scripts/check-conventions.sh
-
 clean:
 	rm -rf $(BIN_DIR)
 
