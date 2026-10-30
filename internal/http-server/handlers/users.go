@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -212,4 +214,97 @@ func (p *PullRequest) UsersRestore(ctx *gin.Context) {
 	log.Info("user restored", slog.String("user", user.UserId))
 
 	ctx.JSON(http.StatusOK, responses.UserResponse{User: user})
+}
+
+
+const (
+	bearerPrefix     = "Bearer "
+	exportFormatJSON = "json"
+	exportFormatCSV  = "csv"
+)
+
+func (p *PullRequest) UsersExport(ctx *gin.Context) {
+	const op = "handlers.UsersExport"
+
+	log := p.log.With(
+		slog.String("op", op),
+	)
+
+	// Ручка не административная: токен — идентификатор самого пользователя,
+	// выгрузить можно только собственные данные.
+	auth := ctx.GetHeader("Authorization")
+	tokenUserId := strings.TrimPrefix(auth, bearerPrefix)
+
+	if !strings.HasPrefix(auth, bearerPrefix) || tokenUserId == "" {
+		log.Info("invalid token", slog.Any("token", auth))
+
+		ctx.JSON(http.StatusUnauthorized, responses.Error(UNAUTHORIZED, "invalid token"))
+		return
+	}
+
+	userId := ctx.Query("user_id")
+	if userId == "" {
+		log.Info("parameter 'user_id' is required")
+		ctx.JSON(http.StatusBadRequest, responses.Error(INVALID_REQUEST, "Parameter 'user_id' is required"))
+		return
+	}
+
+	if tokenUserId != userId {
+		log.Info("foreign data export attempt",
+			slog.String("user_id", userId),
+			slog.String("token_user_id", tokenUserId),
+		)
+
+		ctx.JSON(http.StatusForbidden, responses.Error(FORBIDDEN, "only own data can be exported"))
+		return
+	}
+
+	format := ctx.DefaultQuery("format", exportFormatJSON)
+	if format != exportFormatJSON && format != exportFormatCSV {
+		log.Info("unsupported export format", slog.String("format", format))
+		ctx.JSON(http.StatusBadRequest, responses.Error(INVALID_REQUEST, "Parameter 'format' must be 'json' or 'csv'"))
+		return
+	}
+
+	export, err := p.userProvider.ReadUserExport(userId)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+
+			log.Info("user not found", slog.String("user_id", userId))
+
+			ctx.JSON(http.StatusNotFound, responses.Error(NOT_FOUND, "user not found"))
+			return
+		}
+
+		log.Error("failed to export user data", sl.Err(err))
+		ctx.JSON(http.StatusInternalServerError, responses.Error(INTERNAL_ERROR, "failed to export user data"))
+		return
+	}
+
+	responseBody := responses.UserExportResponse{
+		User:                 export.User,
+		Teammates:            export.Teammates,
+		AuthoredPullRequests: export.AuthoredPullRequests,
+		ReviewPullRequests:   export.ReviewPullRequests,
+	}
+
+	if format == exportFormatCSV {
+		body, err := responses.UserExportCSV(responseBody)
+		if err != nil {
+			log.Error("failed to encode export to csv", sl.Err(err))
+			ctx.JSON(http.StatusInternalServerError, responses.Error(INTERNAL_ERROR, "failed to encode export to csv"))
+			return
+		}
+
+		log.Info("user data exported", slog.String("user_id", userId), slog.String("format", format))
+
+		ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="user_%s_export.csv"`, userId))
+		ctx.Data(http.StatusOK, "text/csv; charset=utf-8", body)
+		return
+	}
+
+	log.Info("user data exported", slog.String("user_id", userId), slog.String("format", format))
+
+	ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="user_%s_export.json"`, userId))
+	ctx.JSON(http.StatusOK, responseBody)
 }

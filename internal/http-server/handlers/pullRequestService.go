@@ -20,6 +20,7 @@ const (
 	NO_CANDIDATE         = "NO_CANDIDATE"
 	USER_ALREADY_DELETED = "USER_ALREADY_DELETED"
 	USER_NOT_DELETED     = "USER_NOT_DELETED"
+	FORBIDDEN            = "FORBIDDEN"
 )
 
 const (
@@ -44,6 +45,7 @@ type UserProvider interface {
 	DeleteUser(requests.UserDeleteRequest) (models.User, error)
 	RestoreUser(requests.UserRestoreRequest) (models.User, error)
 	ReadReviewUsers(request string) ([]models.PullRequestShort, error)
+	ReadUserExport(userId string) (models.UserExport, error)
 }
 
 type PullRequestProvider interface {

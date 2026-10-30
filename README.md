@@ -104,3 +104,78 @@ curl -X POST localhost:8080/users/restore \
 | 404 | `NOT_FOUND` | пользователя нет в БД |
 | 409 | `USER_NOT_DELETED` | пользователь не был удалён |
 | 500 | `INTERNAL_ERROR` | непредвиденная ошибка |
+
+
+## Выгрузка своих данных (`GET /users/export`)
+
+Ручка собирает всё, что сервис знает о пользователе, в один файл: профиль из `users`,
+живых коллег по команде из `users`, авторские пулл-реквесты из `pull_requests` и назначения
+на ревью из `pr_reviewers`.
+
+В отличие от `POST /users/delete` и `POST /users/restore`, это **не** административная ручка:
+в `Authorization: Bearer <user_id>` передаётся идентификатор самого пользователя, и выгрузить
+можно только собственные данные — при `user_id` в запросе, не совпадающем с токеном, ответ
+`403 FORBIDDEN`. Админский `Bearer secret` здесь доступа не даёт. Удалённый (soft delete)
+пользователь не выгружается — `404 NOT_FOUND`.
+
+Формат задаётся `format=json` (по умолчанию) или `format=csv`; в обоих случаях ответ приходит
+с `Content-Disposition: attachment`, то есть сохраняется как файл `user_<user_id>_export.<json|csv>`.
+
+```sh
+curl -OJ "localhost:8080/users/export?user_id=u1" -H "Authorization: Bearer u1"
+curl -OJ "localhost:8080/users/export?user_id=u1&format=csv" -H "Authorization: Bearer u1"
+```
+
+```json
+{
+  "user": {
+    "user_id": "u1",
+    "username": "Ivan",
+    "team_name": "backend",
+    "is_active": true
+  },
+  "teammates": [
+    {
+      "user_id": "u2",
+      "username": "Olga",
+      "team_name": "backend",
+      "is_active": true
+    }
+  ],
+  "authored_pull_requests": [
+    {
+      "pull_request_id": "pr1",
+      "pull_request_name": "Add export",
+      "author_id": "u1",
+      "status": "OPEN"
+    }
+  ],
+  "review_pull_requests": [
+    {
+      "pull_request_id": "pr2",
+      "pull_request_name": "Fix logs",
+      "author_id": "u2",
+      "status": "OPEN"
+    }
+  ]
+}
+```
+
+CSV — один плоский файл на все разделы, колонка `section` говорит, откуда строка:
+
+```csv
+section,user_id,username,team_name,is_active,pull_request_id,pull_request_name,author_id,status
+profile,u1,Ivan,backend,true,,,,
+teammate,u2,Olga,backend,true,,,,
+authored_pull_request,,,,,pr1,Add export,u1,OPEN
+review_pull_request,,,,,pr2,Fix logs,u2,OPEN
+```
+
+| Код ответа | `code` | Когда |
+|---|---|---|
+| 200 | — | файл выгрузки отдан |
+| 400 | `INVALID_REQUEST` | нет `user_id`, либо `format` не `json`/`csv` |
+| 401 | `UNAUTHORIZED` | нет заголовка `Authorization` или он не вида `Bearer <user_id>` |
+| 403 | `FORBIDDEN` | запрошены чужие данные: `user_id` не совпадает с токеном |
+| 404 | `NOT_FOUND` | пользователя нет в БД или он удалён |
+| 500 | `INTERNAL_ERROR` | непредвиденная ошибка |

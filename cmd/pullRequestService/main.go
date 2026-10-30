@@ -42,6 +42,7 @@ func main() {
 	router.GET("/users/getReview", handlers.UsersGetReview)
 	router.POST("/users/delete", handlers.UsersDelete)
 	router.POST("/users/restore", handlers.UsersRestore)
+	router.GET("/users/export", handlers.UsersExport)
 	router.POST("/pullRequest/create", handlers.PullRequestCreate)
 	router.POST("/pullRequest/merge", handlers.PullRequestMerge)
 	router.POST("/pullRequest/reassign", handlers.PullRequestReassign)
