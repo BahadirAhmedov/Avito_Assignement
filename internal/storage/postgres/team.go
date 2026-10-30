@@ -81,7 +81,7 @@ func (s *Storage) ReadTeam(teamName string) (string, []models.User, error) {
 	rows, err := s.db.Query(`
 	SELECT user_id, username, is_active
 	FROM users
-	WHERE team_name = $1`, teamName)
+	WHERE team_name = $1 AND deleted_at IS NULL`, teamName)
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", op, err)
 	}

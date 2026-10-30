@@ -8,16 +8,18 @@ import (
 )
 
 const (
-	TEAM_EXISTS     = "TEAM_EXISTS"
-	INVALID_REQUEST = "INVALID_REQUEST"
-	TEAM_NOT_FOUND  = "TEAM_NOT_FOUND"
-	NOT_FOUND       = "NOT_FOUND"
-	UNAUTHORIZED    = "UNAUTHORIZED"
-	PR_EXISTS       = "PR_EXISTS"
-	PR_MERGED       = "PR_MERGED"
-	NOT_ASSIGNED    = "NOT_ASSIGNED"
-	INTERNAL_ERROR  = "INTERNAL_ERROR"
-	NO_CANDIDATE    = "NO_CANDIDATE"
+	TEAM_EXISTS          = "TEAM_EXISTS"
+	INVALID_REQUEST      = "INVALID_REQUEST"
+	TEAM_NOT_FOUND       = "TEAM_NOT_FOUND"
+	NOT_FOUND            = "NOT_FOUND"
+	UNAUTHORIZED         = "UNAUTHORIZED"
+	PR_EXISTS            = "PR_EXISTS"
+	PR_MERGED            = "PR_MERGED"
+	NOT_ASSIGNED         = "NOT_ASSIGNED"
+	INTERNAL_ERROR       = "INTERNAL_ERROR"
+	NO_CANDIDATE         = "NO_CANDIDATE"
+	USER_ALREADY_DELETED = "USER_ALREADY_DELETED"
+	USER_NOT_DELETED     = "USER_NOT_DELETED"
 )
 
 const (
@@ -32,7 +34,6 @@ type PullRequest struct {
 	TteamProvide        TeamProvider
 }
 
-
 type TeamProvider interface {
 	SaveTeam(requests.TeamRequest) error
 	ReadTeam(string) (string, []models.User, error)
@@ -40,6 +41,8 @@ type TeamProvider interface {
 
 type UserProvider interface {
 	SetIsActive(requests.UsersRequest) (models.User, error)
+	DeleteUser(requests.UserDeleteRequest) (models.User, error)
+	RestoreUser(requests.UserRestoreRequest) (models.User, error)
 	ReadReviewUsers(request string) ([]models.PullRequestShort, error)
 }
 
@@ -61,6 +64,3 @@ func New(
 		userProvider:        userProvider,
 		TteamProvide:        TteamProvide}
 }
-
-
-
